@@ -1,8 +1,11 @@
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- Global Settings (Managed by UI)
+-- ==========================================
+-- SETTINGS & CACHE
+-- ==========================================
 local Settings = {
 	Enabled = false,
 	BuyEggs = false,
@@ -11,15 +14,16 @@ local Settings = {
 	TeleportHeight = 5
 }
 
--- Performance Cache
 local seedCache = {}
 local eggCache = {}
 local leverCache = {}
 
-local SEED_NAMES  = { ["BuySeed"] = true, ["HarvestPrompt"] = true }
-local EGG_NAMES   = { ["BuyEgg"] = true, ["HatchEgg"] = true, ["RollEgg"] = true, ["EggPrompt"] = true, ["Hatch"] = true, ["Egg"] = true }
+local SEED_NAMES = { ["BuySeed"] = true, ["HarvestPrompt"] = true }
+local EGG_NAMES  = { ["BuyEgg"] = true, ["HatchEgg"] = true, ["RollEgg"] = true, ["EggPrompt"] = true, ["Hatch"] = true, ["Egg"] = true }
 
--- Forces prompt properties to be usable anywhere
+-- ==========================================
+-- LOGIC FUNCTIONS
+-- ==========================================
 local function forceEnablePrompt(prompt)
 	pcall(function()
 		prompt.Enabled = true
@@ -43,7 +47,6 @@ local function getPromptCFrame(prompt)
 	return nil
 end
 
--- Universal prompt activator
 local function firePrompt(prompt)
 	if not Settings.Enabled then return false end
 	if not prompt or not prompt.Parent then return false end
@@ -55,13 +58,11 @@ local function firePrompt(prompt)
 	if rootPart and targetCFrame then
 		forceEnablePrompt(prompt)
 		
-		-- Teleport character directly to prompt
 		rootPart.CFrame = targetCFrame * CFrame.new(0, Settings.TeleportHeight, 0)
 		task.wait(0.08)
 		
 		if not Settings.Enabled then return false end
 
-		-- Try all execution methods
 		pcall(function()
 			if fireproximityprompt then
 				fireproximityprompt(prompt)
@@ -70,7 +71,6 @@ local function firePrompt(prompt)
 			task.wait(0.02)
 			prompt:InputHoldEnd()
 			
-			-- Fallback signal fire
 			if prompt.Triggered then
 				for _, connection in ipairs(getconnections(prompt.Triggered)) do
 					connection:Fire(LocalPlayer)
@@ -119,10 +119,7 @@ local function isEggPrompt(obj)
 end
 
 local function isRollSeedLeverPrompt(obj)
-	if obj.Name == "RollSeeds" then
-		return true
-	end
-	return false
+	return obj.Name == "RollSeeds"
 end
 
 local function trackObject(obj)
@@ -145,7 +142,9 @@ end
 for _, obj in ipairs(Workspace:GetDescendants()) do trackObject(obj) end
 Workspace.DescendantAdded:Connect(trackObject)
 
--- Core Loop
+-- ==========================================
+-- CORE LOOP
+-- ==========================================
 task.spawn(function()
 	while true do
 		if Settings.Enabled then
@@ -163,7 +162,7 @@ task.spawn(function()
 					end
 				end
 				
-				-- 2. Buy/Hatch Eggs (If Enabled)
+				-- 2. Buy/Hatch Eggs
 				if Settings.BuyEggs and Settings.Enabled then
 					for prompt in pairs(eggCache) do
 						if not Settings.Enabled then break end
@@ -189,7 +188,6 @@ task.spawn(function()
 						end
 					end
 					
-					-- Responsive Wait Loop (Breaks immediately if disabled)
 					if pulledLever then
 						for i = 1, Settings.LeverCooldown * 10 do
 							if not Settings.Enabled then break end
@@ -204,149 +202,248 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- UI DESIGN
+-- INTEGRATED UI CONSTRUCTION
 -- ==========================================
-
-local oldGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("FarmMenuGui")
+local oldGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("BarfAFKGui")
 if oldGui then oldGui:Destroy() end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FarmMenuGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local ScreenGui_1 = Instance.new("ScreenGui")
+ScreenGui_1.Name = "BarfAFKGui"
+ScreenGui_1.ResetOnSpawn = false
+ScreenGui_1.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 280)
-MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+local TopBar_2 = Instance.new("Frame")
+TopBar_2.Name = "TopBar"
+TopBar_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TopBar_2.BorderSizePixel = 0
+TopBar_2.Position = UDim2.new(0.35, 0, 0.3, 0)
+TopBar_2.Size = UDim2.new(0, 418, 0, 44)
+TopBar_2.Parent = ScreenGui_1
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
+local UICorner_3 = Instance.new("UICorner")
+UICorner_3.CornerRadius = UDim.new(0, 12)
+UICorner_3.Parent = TopBar_2
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-Title.Text = "  🌾 AFK Farm Panel"
-Title.TextColor3 = Color3.fromRGB(240, 240, 240)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 16
-Title.Parent = MainFrame
+local UIGradient_5 = Instance.new("UIGradient")
+UIGradient_5.Rotation = 90
+UIGradient_5.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(111, 0, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(101, 0, 225))
+})
+UIGradient_5.Parent = TopBar_2
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 8)
-TitleCorner.Parent = Title
+local UIStroke_6 = Instance.new("UIStroke")
+UIStroke_6.Color = Color3.fromRGB(20, 13, 29)
+UIStroke_6.Thickness = 3
+UIStroke_6.Parent = TopBar_2
 
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.Padding = UDim.new(0, 8)
-ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-ListLayout.Parent = MainFrame
+local TextLabel_4 = Instance.new("TextLabel")
+TextLabel_4.Size = UDim2.new(1, 0, 1, 0)
+TextLabel_4.BackgroundTransparency = 1
+TextLabel_4.Font = Enum.Font.FredokaOne
+TextLabel_4.Text = "barf AFK script"
+TextLabel_4.TextColor3 = Color3.fromRGB(235, 225, 255)
+TextLabel_4.TextSize = 22
+TextLabel_4.Parent = TopBar_2
 
-local Padding = Instance.new("UIPadding")
-Padding.PaddingTop = UDim.new(0, 45)
-Padding.Parent = MainFrame
+local Main_7 = Instance.new("Frame")
+Main_7.Name = "Main"
+Main_7.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Main_7.BorderSizePixel = 0
+Main_7.Position = UDim2.new(0, 0, 1, 6)
+Main_7.Size = UDim2.new(0, 418, 0, 227)
+Main_7.Parent = TopBar_2
 
--- Toggle Main Status
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 270, 0, 32)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-ToggleBtn.Text = "Farm Status: OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 14
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Parent = MainFrame
+local UICorner_8 = Instance.new("UICorner")
+UICorner_8.CornerRadius = UDim.new(0, 12)
+UICorner_8.Parent = Main_7
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
+local UIGradient_9 = Instance.new("UIGradient")
+UIGradient_9.Rotation = 90
+UIGradient_9.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(101, 0, 225)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 10, 60))
+})
+UIGradient_9.Parent = Main_7
 
-ToggleBtn.MouseButton1Click:Connect(function()
+local UIStroke_10 = Instance.new("UIStroke")
+UIStroke_10.Color = Color3.fromRGB(20, 13, 29)
+UIStroke_10.Thickness = 3
+UIStroke_10.Parent = Main_7
+
+local Seperator_11 = Instance.new("Frame")
+Seperator_11.Name = "Seperator"
+Seperator_11.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Seperator_11.Position = UDim2.new(0.5, 0, 0.05, 0)
+Seperator_11.Size = UDim2.new(0, 2, 0.9, 0)
+Seperator_11.Parent = Main_7
+
+local UIStroke_12 = Instance.new("UIStroke")
+UIStroke_12.Color = Color3.fromRGB(20, 13, 29)
+UIStroke_12.Thickness = 1
+UIStroke_12.Parent = Seperator_11
+
+-- Smooth Dragging Mechanism
+local dragging, dragInput, dragStart, startPos
+TopBar_2.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = TopBar_2.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+TopBar_2.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		TopBar_2.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Main Toggle Button
+local FarmToggle = Instance.new("TextButton")
+FarmToggle.Name = "FarmToggle"
+FarmToggle.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+FarmToggle.Position = UDim2.new(0.04, 0, 0.08, 0)
+FarmToggle.Size = UDim2.new(0, 180, 0, 130)
+FarmToggle.Font = Enum.Font.FredokaOne
+FarmToggle.Text = "FARM STATUS\n\nOFF"
+FarmToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+FarmToggle.TextSize = 20
+FarmToggle.Parent = Main_7
+
+local FarmCorner = Instance.new("UICorner")
+FarmCorner.CornerRadius = UDim.new(0, 10)
+FarmCorner.Parent = FarmToggle
+
+local FarmStroke = Instance.new("UIStroke")
+FarmStroke.Color = Color3.fromRGB(20, 13, 29)
+FarmStroke.Thickness = 2
+FarmStroke.Parent = FarmToggle
+
+FarmToggle.MouseButton1Click:Connect(function()
 	Settings.Enabled = not Settings.Enabled
 	if Settings.Enabled then
-		ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-		ToggleBtn.Text = "Farm Status: RUNNING"
+		FarmToggle.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+		FarmToggle.Text = "FARM STATUS\n\nRUNNING"
 	else
-		ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-		ToggleBtn.Text = "Farm Status: OFF"
+		FarmToggle.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+		FarmToggle.Text = "FARM STATUS\n\nOFF"
 	end
 end)
 
--- Toggle Egg Buying
-local EggToggleBtn = Instance.new("TextButton")
-EggToggleBtn.Size = UDim2.new(0, 270, 0, 32)
-EggToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-EggToggleBtn.Text = "Buy Eggs: OFF"
-EggToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-EggToggleBtn.Font = Enum.Font.SourceSansBold
-EggToggleBtn.TextSize = 14
-EggToggleBtn.BorderSizePixel = 0
-EggToggleBtn.Parent = MainFrame
+-- Egg Toggle Button
+local EggToggle = Instance.new("TextButton")
+EggToggle.Name = "EggToggle"
+EggToggle.BackgroundColor3 = Color3.fromRGB(60, 40, 80)
+EggToggle.Position = UDim2.new(0.04, 0, 0.72, 0)
+EggToggle.Size = UDim2.new(0, 180, 0, 45)
+EggToggle.Font = Enum.Font.FredokaOne
+EggToggle.Text = "BUY EGGS: OFF"
+EggToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+EggToggle.TextSize = 15
+EggToggle.Parent = Main_7
 
-local EggBtnCorner = Instance.new("UICorner")
-EggBtnCorner.CornerRadius = UDim.new(0, 6)
-EggBtnCorner.Parent = EggToggleBtn
+local EggCorner = Instance.new("UICorner")
+EggCorner.CornerRadius = UDim.new(0, 8)
+EggCorner.Parent = EggToggle
 
-EggToggleBtn.MouseButton1Click:Connect(function()
+local EggStroke = Instance.new("UIStroke")
+EggStroke.Color = Color3.fromRGB(20, 13, 29)
+EggStroke.Thickness = 2
+EggStroke.Parent = EggToggle
+
+EggToggle.MouseButton1Click:Connect(function()
 	Settings.BuyEggs = not Settings.BuyEggs
 	if Settings.BuyEggs then
-		EggToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 180)
-		EggToggleBtn.Text = "Buy Eggs: ON"
+		EggToggle.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+		EggToggle.Text = "BUY EGGS: ON"
 	else
-		EggToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-		EggToggleBtn.Text = "Buy Eggs: OFF"
+		EggToggle.BackgroundColor3 = Color3.fromRGB(60, 40, 80)
+		EggToggle.Text = "BUY EGGS: OFF"
 	end
 end)
 
-local function createSliderRow(labelText, defaultVal, min, max, callback)
-	local Row = Instance.new("Frame")
-	Row.Size = UDim2.new(0, 270, 0, 30)
-	Row.BackgroundTransparency = 1
-	Row.Parent = MainFrame
+-- Controls Container
+local PropertiesFrame = Instance.new("Frame")
+PropertiesFrame.Name = "Properties"
+PropertiesFrame.BackgroundTransparency = 1
+PropertiesFrame.Position = UDim2.new(0.54, 0, 0.05, 0)
+PropertiesFrame.Size = UDim2.new(0, 180, 0, 200)
+PropertiesFrame.Parent = Main_7
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 10)
+ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ListLayout.Parent = PropertiesFrame
+
+local function createModifierBox(labelText, defaultValue, minVal, maxVal, onChange)
+	local Container = Instance.new("Frame")
+	Container.Size = UDim2.new(1, 0, 0, 52)
+	Container.BackgroundColor3 = Color3.fromRGB(30, 15, 45)
+	Container.Parent = PropertiesFrame
+	
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 6)
+	Corner.Parent = Container
+
+	local Stroke = Instance.new("UIStroke")
+	Stroke.Color = Color3.fromRGB(20, 13, 29)
+	Stroke.Thickness = 1.5
+	Stroke.Parent = Container
 
 	local Label = Instance.new("TextLabel")
-	Label.Size = UDim2.new(0, 150, 1, 0)
-	Label.Text = labelText .. ": " .. tostring(defaultVal)
-	Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-	Label.Font = Enum.Font.SourceSans
+	Label.Size = UDim2.new(1, -10, 0, 22)
+	Label.Position = UDim2.new(0, 5, 0, 2)
+	Label.BackgroundTransparency = 1
+	Label.Font = Enum.Font.FredokaOne
+	Label.Text = labelText
+	Label.TextColor3 = Color3.fromRGB(200, 190, 220)
 	Label.TextSize = 13
 	Label.TextXAlignment = Enum.TextXAlignment.Left
-	Label.BackgroundTransparency = 1
-	Label.Parent = Row
+	Label.Parent = Container
 
-	local TextBox = Instance.new("TextBox")
-	TextBox.Size = UDim2.new(0, 60, 0, 22)
-	TextBox.Position = UDim2.new(1, -60, 0.5, -11)
-	TextBox.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-	TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-	TextBox.Text = tostring(defaultVal)
-	TextBox.Font = Enum.Font.SourceSans
-	TextBox.TextSize = 13
-	TextBox.BorderSizePixel = 0
-	TextBox.Parent = Row
-	
-	local boxCorner = Instance.new("UICorner")
-	boxCorner.CornerRadius = UDim.new(0, 4)
-	boxCorner.Parent = TextBox
+	local Input = Instance.new("TextBox")
+	Input.Size = UDim2.new(1, -10, 0, 20)
+	Input.Position = UDim2.new(0, 5, 0, 26)
+	Input.BackgroundColor3 = Color3.fromRGB(15, 8, 25)
+	Input.Font = Enum.Font.SourceSansBold
+	Input.Text = tostring(defaultValue)
+	Input.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Input.TextSize = 14
+	Input.Parent = Container
 
-	TextBox.FocusLost:Connect(function()
-		local val = tonumber(TextBox.Text)
-		if val then
-			val = math.clamp(val, min, max)
-			TextBox.Text = tostring(val)
-			Label.Text = labelText .. ": " .. tostring(val)
-			callback(val)
+	local InputCorner = Instance.new("UICorner")
+	InputCorner.CornerRadius = UDim.new(0, 4)
+	InputCorner.Parent = Input
+
+	Input.FocusLost:Connect(function()
+		local num = tonumber(Input.Text)
+		if num then
+			num = math.clamp(num, minVal, maxVal)
+			Input.Text = tostring(num)
+			onChange(num)
 		else
-			TextBox.Text = tostring(defaultVal)
+			Input.Text = tostring(defaultValue)
 		end
 	end)
 end
 
-createSliderRow("Scan Speed (sec)", Settings.CheckInterval, 0.05, 5, function(v) Settings.CheckInterval = v end)
-createSliderRow("Lever Wait (sec)", Settings.LeverCooldown, 1, 300, function(v) Settings.LeverCooldown = v end)
-createSliderRow("TP Flight Height", Settings.TeleportHeight, 1, 20, function(v) Settings.TeleportHeight = v end)
+createModifierBox("Scan Interval (s)", Settings.CheckInterval, 0.05, 5, function(val)
+	Settings.CheckInterval = val
+end)
+
+createModifierBox("Lever Delay (s)", Settings.LeverCooldown, 1, 300, function(val)
+	Settings.LeverCooldown = val
+end)
+
+createModifierBox("Flight Height", Settings.TeleportHeight, 1, 30, function(val)
+	Settings.TeleportHeight = val
+end)
+
+ScreenGui_1.Parent = LocalPlayer:WaitForChild("PlayerGui")
